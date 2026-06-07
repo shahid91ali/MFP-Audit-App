@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="সদস্য যাচাই">
+<meta name="theme-color" content="#1a5276">
+<link rel="manifest" id="pwaManifest">
+<title>সদস্য যাচাই অ্যাপ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --primary:#1a5276; --primary-light:#2e86c1; --primary-dark:#154360;
+  --accent:#e67e22; --success:#1e8449; --success-bg:#d5f5e3;
+  --danger:#c0392b; --danger-bg:#fadbd8; --warning:#f39c12;
+  --bg:#f0f4f8; --card:#fff; --border:#d1d9e0;
+  --text:#1a202c; --text-muted:#718096;
+  --sidebar-w:280px; --header-h:60px;
+  --font:'Noto Sans Bengali','SolaimanLipi','Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}
+
+/* ===== LOGIN SCREEN ===== */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3349 0%,#1a5276 50%,#2e86c1 100%);padding:20px}
+.login-box{background:white;border-radius:16px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo .icon{font-size:52px;display:block;margin-bottom:8px}
+.login-logo h1{font-size:20px;font-weight:700;color:var(--primary)}
+.login-logo p{font-size:12px;color:var(--text-muted);margin-top:4px}
+.login-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.login-tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;background:white;border:none}
+.login-tab.active{background:var(--primary);color:white}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font);outline:none;transition:all .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(46,134,193,.15)}
+.login-btn{width:100%;padding:12px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s}
+.login-btn:hover{background:var(--primary-dark)}
+.login-err{background:#fee;border:1px solid #fcc;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:14px;display:none}
+.login-info{background:#e8f4fd;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--primary);margin-top:14px;line-height:1.7}
+
+/* ===== HEADER ===== */
+.header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:var(--primary);color:white;display:flex;align-items:center;padding:0 16px;gap:10px;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header h1{font-size:15px;font-weight:600;flex:1}
+.header-stats{display:flex;gap:8px;font-size:11px}
+.stat-badge{background:rgba(255,255,255,.15);padding:4px 8px;border-radius:10px}
+.stat-badge span{font-weight:700;color:#ffd700}
+.btn-icon{background:rgba(255,255,255,.15);border:none;color:white;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-icon:hover{background:rgba(255,255,255,.25)}
+.user-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 10px 4px 6px;font-size:12px;cursor:pointer}
+.user-chip .avatar{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.role-badge{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700}
+.role-admin{background:#ffd700;color:#1a3a00}
+.role-user{background:#a8e6cf;color:#0d4a2a}
+
+/* ===== LAYOUT ===== */
+.layout{display:flex;margin-top:var(--header-h);min-height:calc(100vh - var(--header-h))}
+.sidebar{width:var(--sidebar-w);background:var(--card);border-right:1px solid var(--border);position:fixed;top:var(--header-h);bottom:0;left:0;overflow-y:auto;z-index:900;transition:transform .3s;padding:12px 0}
+.sidebar.hidden{transform:translateX(-100%)}
+.sidebar-section{padding:0 12px 8px;margin-bottom:4px}
+.sidebar-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;padding:8px 4px 4px}
+.search-box{position:relative;margin-bottom:8px}
+.search-box input{width:100%;padding:8px 10px 8px 32px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);outline:none;font-family:var(--font)}
+.search-box input:focus{border-color:var(--primary-light);box-shadow:0 0 0 2px rgba(46,134,193,.15)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px}
+.filter-row{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.filter-btn{padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:white;font-size:11px;cursor:pointer;transition:all .2s;font-family:var(--font)}
+.filter-btn.active{background:var(--primary);color:white;border-color:var(--primary)}
+.filter-select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:white;outline:none;margin-bottom:6px;cursor:pointer;font-family:var(--font)}
+.member-list{padding:0 8px}
+.member-item{padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:3px;border:1px solid transparent;transition:all .15s;position:relative}
+.member-item:hover{background:#edf2f7}
+.member-item.active{background:#ebf5fb;border-color:var(--primary-light)}
+.member-item.done{border-left:3px solid var(--success);background:#f0fff4}
+.member-item.pending{border-left:3px solid #adb5bd}
+.member-name{font-weight:600;font-size:13px}
+.member-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+.member-badge{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.badge-done{background:var(--success-bg);color:var(--success)}
+.badge-pending{background:#e9ecef;color:#6c757d}
+
+/* ===== MAIN ===== */
+.main{margin-left:var(--sidebar-w);flex:1;padding:16px;transition:margin .3s}
+.main.full-width{margin-left:0}
+
+/* ===== WELCOME ===== */
+.welcome-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;text-align:center;padding:40px 20px}
+.welcome-screen h2{font-size:22px;color:var(--primary);margin-bottom:8px}
+.welcome-screen p{color:var(--text-muted);margin-bottom:24px;max-width:400px}
+.upload-zone{border:2px dashed var(--primary-light);border-radius:12px;padding:32px 48px;cursor:pointer;transition:all .2s;background:white}
+.upload-zone:hover{background:#ebf5fb;border-color:var(--primary)}
+.upload-btn{background:var(--primary);color:white;padding:11px 26px;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;margin-top:12px;font-family:var(--font)}
+
+/* ===== CARDS ===== */
+.member-card{background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:16px;overflow:hidden}
+.member-card-header{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%);color:white;padding:16px 20px;display:flex;align-items:flex-start;gap:16px}
+.member-avatar{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0}
+.member-info h2{font-size:18px;font-weight:700}
+.member-info .sub{font-size:12px;opacity:.85;margin-top:2px}
+.member-card-body{padding:16px 20px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.info-item label{font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.info-item .val{font-size:14px;font-weight:500}
+.info-item .val.phone{color:var(--primary-light);text-decoration:none;cursor:pointer}
+.info-item .val.phone:hover{text-decoration:underline}
+.odi-val{color:var(--danger);font-weight:700}
+
+/* ===== CHECKLIST ===== */
+.checklist-card{background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:16px}
+.checklist-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.checklist-header h3{font-size:15px;font-weight:700;color:var(--primary)}
+.progress-bar-wrap{width:140px}
+.progress-bar-bg{background:#e9ecef;border-radius:4px;height:6px;margin-top:4px}
+.progress-bar-fill{background:var(--success);border-radius:4px;height:6px;transition:width .3s}
+.progress-text{font-size:11px;color:var(--text-muted);text-align:right}
+.section-block{border:1px solid var(--border);border-radius:8px;margin:12px 16px;overflow:hidden}
+.section-head{background:#f8f9fa;padding:10px 14px;font-weight:700;font-size:13px;color:var(--primary-dark);cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.section-head:hover{background:#edf2f7}
+.section-body{padding:8px 0}
+.checklist-row{padding:8px 14px;display:grid;align-items:center;gap:8px;border-bottom:1px solid #f0f4f8;grid-template-columns:1fr auto auto}
+.checklist-row:last-child{border-bottom:none}
+.check-label{font-size:13px;line-height:1.4}
+.check-label .sub-label{font-size:11px;color:var(--text-muted)}
+.check-yes-btn{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:white;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s;white-space:nowrap}
+.check-yes-btn.yes-active{background:var(--success);color:white;border-color:var(--success)}
+.check-yes-btn:hover:not(.yes-active){background:#f8f9fa;border-color:var(--primary-light)}
+.check-comment{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font);width:200px;outline:none;direction:auto;unicode-bidi:plaintext}
+.check-comment:focus{border-color:var(--primary-light);box-shadow:0 0 0 2px rgba(46,134,193,.15)}
+.check-comment:disabled{background:#f0fff4;color:var(--success);cursor:not-allowed;font-weight:500}
+.collapsed .section-body{display:none}
+
+/* ===== BUTTONS ===== */
+.btn{padding:9px 18px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-weight:600;transition:all .2s;font-family:var(--font)}
+.btn-primary{background:var(--primary);color:white}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-success{background:var(--success);color:white}
+.btn-success:hover{background:#1a7340}
+.btn-danger{background:var(--danger);color:white}
+.btn-danger:hover{background:#a93226}
+.btn-outline{background:white;color:var(--primary);border:1px solid var(--primary)}
+.btn-outline:hover{background:#ebf5fb}
+.btn-warning{background:var(--warning);color:white}
+.action-bar{display:flex;gap:10px;flex-wrap:wrap;padding:0 0 12px}
+
+/* ===== ADMIN PANEL ===== */
+.admin-panel{padding:4px 0}
+.admin-tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:20px;gap:0}
+.admin-tab{padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;color:var(--text-muted)}
+.admin-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.admin-tab:hover{color:var(--primary)}
+.admin-section{display:none}
+.admin-section.active{display:block}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:10px 12px;text-align:left;background:#f8f9fa;font-weight:700;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border)}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:hover td{background:#f8f9fa}
+.data-table tr:last-child td{border-bottom:none}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-online{background:#1e8449}
+.dot-offline{background:#adb5bd}
+.user-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:16px}
+.user-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative}
+.user-card-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.user-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.avatar-admin{background:#fef3c7;color:#d97706}
+.avatar-user{background:#dbeafe;color:#1d4ed8}
+.user-card-name{font-weight:700;font-size:14px}
+.user-card-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+.user-card-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.mini-stat{background:#f8f9fa;border-radius:6px;padding:6px 10px;text-align:center}
+.mini-stat .num{font-size:18px;font-weight:700;color:var(--primary)}
+.mini-stat .lbl{font-size:10px;color:var(--text-muted)}
+.user-actions{display:flex;gap:6px;margin-top:10px}
+.btn-xs{padding:5px 10px;font-size:11px;border-radius:6px;border:none;cursor:pointer;font-weight:600;font-family:var(--font)}
+.btn-xs-danger{background:var(--danger-bg);color:var(--danger)}
+.btn-xs-warning{background:#fff3cd;color:#856404}
+.btn-xs-info{background:#cfe2ff;color:#084298}
+.online-indicator{position:absolute;top:12px;right:12px;font-size:11px;display:flex;align-items:center;gap:4px}
+.activity-list{list-style:none}
+.activity-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+.activity-item:last-child{border-bottom:none}
+.activity-icon{width:32px;height:32px;border-radius:50%;background:#e8f4fd;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.activity-text{font-size:13px;flex:1}
+.activity-time{font-size:11px;color:var(--text-muted)}
+
+/* ===== STATS BAR ===== */
+.stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;flex:1;min-width:120px}
+.stat-card .num{font-size:24px;font-weight:700}
+.stat-card .lbl{font-size:11px;color:var(--text-muted);margin-top:2px}
+.stat-card.done-stat .num{color:var(--success)}
+.stat-card.pending-stat .num{color:var(--text-muted)}
+.stat-card.total-stat .num{color:var(--primary)}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:white;border-radius:12px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1}
+.close-btn:hover{color:var(--text)}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 18px;border-radius:8px;color:white;font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.2);animation:slideIn .3s ease;max-width:300px}
+.toast.success{background:var(--success)}
+.toast.error{background:var(--danger)}
+.toast.info{background:var(--primary)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ===== EMPTY / LOADING ===== */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+input[type=file]{display:none}
+.highlight{background:yellow;border-radius:2px}
+.section-count{font-size:11px;font-weight:600}
+.done-count{color:var(--success)}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  .sidebar{width:100%;z-index:950}
+  :root{--sidebar-w:0px}
+  .info-grid{grid-template-columns:1fr 1fr}
+  .checklist-row{grid-template-columns:1fr;gap:6px}
+  .check-comment{width:100%;box-sizing:border-box}
+  .header-stats{display:none}
+  .user-card-grid{grid-template-columns:1fr}
+  .admin-tabs{overflow-x:auto}
+  .admin-tab{white-space:nowrap}
+}
+@media(min-width:769px){.sidebar{transform:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="loginScreen" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="icon">🏦</span>
+      <h1>সদস্য যাচাই অ্যাপ</h1>
+      <p>মাইক্রোফাইনান্স চেক লিস্ট ম্যানেজমেন্ট</p>
+    </div>
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchLoginTab('admin',this)">🔐 অ্যাডমিন</button>
+      <button class="login-tab" onclick="switchLoginTab('user',this)">👤 ইউজার</button>
+    </div>
+    <div id="loginErr" class="login-err">❌ ভুল ইউজারনেম বা পাসওয়ার্ড</div>
+    <div class="form-group">
+      <label>ইউজারনেম</label>
+      <input type="text" id="loginUsername" placeholder="ইউজারনেম লিখুন" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="form-group">
+      <label>পাসওয়ার্ড</label>
+      <input type="password" id="loginPassword" placeholder="পাসওয়ার্ড লিখুন" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">লগইন করুন →</button>
+    <div class="login-info" id="loginHint">
+      <strong>ডিফল্ট অ্যাডমিন:</strong><br>
+      ইউজারনেম: <code>admin</code> &nbsp;|&nbsp; পাসওয়ার্ড: <code>admin123</code>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="appWrap" style="display:none">
+
+<!-- HEADER -->
+<div class="header">
+  <button class="btn-icon" onclick="toggleSidebar()" title="মেনু">☰</button>
+  <h1>🏦 সদস্য যাচাই অ্যাপ</h1>
+  <div class="header-stats" id="headerStats" style="display:none">
+    <div class="stat-badge">মোট: <span id="hTotal">0</span></div>
+    <div class="stat-badge">সম্পন্ন: <span id="hDone">0</span></div>
+    <div class="stat-badge">বাকি: <span id="hPending">0</span></div>
+  </div>
+  <div id="userChip" class="user-chip" onclick="showUserMenu()">
+    <div class="avatar" id="userAvatar">?</div>
+    <span id="userDisplayName">-</span>
+    <span id="userRoleBadge" class="role-badge">-</span>
+  </div>
+  <button class="btn-icon" id="adminPanelBtn" onclick="showAdminPanel()" title="অ্যাডমিন প্যানেল" style="display:none">⚙️</button>
+  <button class="btn-icon" onclick="document.getElementById('newUploadInput').click()" title="ফাইল আপলোড" id="uploadBtn">📂</button>
+  <button class="btn-icon" onclick="downloadExcel()" title="ডাউনলোড" id="dlBtn" style="display:none">⬇️</button>
+  <button class="btn-icon" onclick="confirmReset()" title="রিসেট" id="rstBtn" style="display:none">🗑️</button>
+  <button class="btn-icon" id="installBtn" onclick="installApp()" title="ইনস্টল" style="display:none;background:rgba(255,215,0,.25)">📲</button>
+  <input type="file" id="newUploadInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+</div>
+
+<!-- ADMIN FILE BANNER -->
+<div id="adminFileBanner" style="display:none;background:#fff3cd;border-bottom:1px solid #ffc107;padding:8px 16px;align-items:center;gap:12px;font-size:13px;color:#856404;position:fixed;top:60px;left:0;right:0;z-index:999">
+  <span id="adminFileBannerText"></span>
+  <button onclick="adminReturnToOwnFile()" style="background:#1a5276;color:white;border:none;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;margin-left:auto">← নিজের ফাইলে ফিরুন</button>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout" id="mainLayout">
+  <div class="sidebar hidden" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">অনুসন্ধান</div>
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" lang="bn" spellcheck="false" autocomplete="off" placeholder="নাম, নম্বর, মোবাইল..." oninput="filterMembers()">
+      </div>
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="setFilter('all',this)">সকল</button>
+        <button class="filter-btn" onclick="setFilter('done',this)">✅ সম্পন্ন</button>
+        <button class="filter-btn" onclick="setFilter('pending',this)">⏳ বাকি</button>
+      </div>
+      <select class="filter-select" id="officerFilter" onchange="filterMembers()">
+        <option value="">সকল MFO অফিসার</option>
+      </select>
+      <select class="filter-select" id="centerFilter" onchange="filterMembers()">
+        <option value="">সকল কেন্দ্র</option>
+      </select>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">সদস্য তালিকা</div>
+    </div>
+    <div class="member-list" id="memberList">
+      <div class="empty-state"><div class="icon">📋</div><p>ফাইল আপলোড করুন</p></div>
+    </div>
+  </div>
+
+  <div class="main full-width" id="mainContent">
+    <div id="welcomeScreen">
+      <div class="welcome-screen">
+        <div style="font-size:48px;margin-bottom:16px">📊</div>
+        <h2>স্বাগতম, <span id="welcomeName"></span></h2>
+        <p>এক্সেল ফাইল আপলোড করে সদস্যদের চেক লিস্ট যাচাই করুন</p>
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('mainUploadInput').click()">
+          <div style="font-size:36px;margin-bottom:8px">📁</div>
+          <div style="font-weight:600;font-size:14px;color:var(--primary)">এক্সেল ফাইল আপলোড করুন</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">.xlsx বা .xls ফাইল</div>
+          <button class="upload-btn">ফাইল বেছে নিন</button>
+        </div>
+        <input type="file" id="mainUploadInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+        <p style="margin-top:12px;font-size:11px;color:var(--text-muted)">⚠️ পেজ রিলোড করলেও ডেটা মুছবে না</p>
+        <div id="installBanner" style="display:none;margin-top:16px;background:linear-gradient(135deg,#1a5276,#2e86c1);color:white;border-radius:12px;padding:14px 18px;max-width:380px;text-align:left">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">📲 অ্যাপ হিসেবে ইনস্টল করুন</div>
+          <div style="font-size:11px;opacity:.9;margin-bottom:10px">হোম স্ক্রিনে যোগ করলে অফলাইনেও চলবে</div>
+          <button onclick="installApp()" style="background:white;color:#1a5276;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">ইনস্টল করুন</button>
+          <button onclick="this.parentElement.style.display='none'" style="background:rgba(255,255,255,.2);color:white;border:none;padding:7px 12px;border-radius:6px;font-size:12px;cursor:pointer;margin-left:6px">পরে</button>
+        </div>
+      </div>
+    </div>
+    <div id="appScreen" style="display:none">
+      <div class="stats-bar" id="statsBar"></div>
+      <div id="memberDetail">
+        <div class="empty-state"><div class="icon">👈</div><p>বাম পাশ থেকে একজন সদস্য বেছে নিন</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end appWrap -->
+
+<!-- ===== ADMIN PANEL MODAL ===== -->
+<div class="modal-overlay" id="adminPanelModal" style="display:none">
+  <div class="modal" style="max-width:780px;width:100%">
+    <div class="modal-header" style="background:var(--primary);color:white;border-radius:12px 12px 0 0">
+      <h3>⚙️ অ্যাডমিন প্যানেল</h3>
+      <button class="close-btn" style="color:white" onclick="closeModal('adminPanelModal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <div class="admin-tabs">
+        <div class="admin-tab active" onclick="switchAdminTab('users',this)">👥 ইউজার ম্যানেজমেন্ট</div>
+        <div class="admin-tab" onclick="switchAdminTab('activity',this)">📊 অ্যাক্টিভিটি লগ</div>
+        <div class="admin-tab" onclick="switchAdminTab('data',this)">📂 ডেটা ওভারভিউ</div>
+        <div class="admin-tab" onclick="switchAdminTab('guide',this)">📖 গাইড</div>
+        <div class="admin-tab" onclick="switchAdminTab('settings',this)">🔧 সেটিংস</div>
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="adminTab_users" class="admin-section active">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h4 style="font-size:14px;color:var(--primary)">সকল ইউজার</h4>
+          <button class="btn btn-primary" style="font-size:12px;padding:7px 14px" onclick="showAddUserModal()">➕ নতুন ইউজার</button>
+        </div>
+        <div class="user-card-grid" id="userCardGrid"></div>
+      </div>
+
+      <!-- ACTIVITY TAB -->
+      <div id="adminTab_activity" class="admin-section">
+        <h4 style="font-size:14px;color:var(--primary);margin-bottom:14px">সাম্প্রতিক কার্যক্রম</h4>
+        <ul class="activity-list" id="activityList"></ul>
+      </div>
+
+      <!-- DATA OVERVIEW TAB -->
+      <div id="adminTab_data" class="admin-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <h4 style="font-size:14px;color:var(--primary)">প্রতিটি ইউজারের ফাইল ও এন্ট্রি</h4>
+          <button class="btn btn-success" style="font-size:12px;padding:7px 14px" onclick="refreshDataTab()">🔄 রিফ্রেশ</button>
+        </div>
+        <div id="userFileCards"></div>
+      </div>
+
+      <!-- GUIDE TAB -->
+      <div id="adminTab_guide" class="admin-section">
+        <div style="max-width:600px;font-size:13px;line-height:1.8">
+          <div style="background:linear-gradient(135deg,#1a5276,#2e86c1);color:white;border-radius:10px;padding:16px 20px;margin-bottom:16px">
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px">📖 সদস্য যাচাই অ্যাপ — ব্যবহারবিধি</div>
+            <div style="font-size:12px;opacity:.9">অ্যাডমিন ও ইউজার প্যানেল ব্যবহারের সম্পূর্ণ নির্দেশিকা</div>
+          </div>
+
+          <div style="background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;border-left:4px solid #ffd700">
+            <div style="font-weight:700;color:#1a5276;margin-bottom:8px">🔐 অ্যাডমিন প্যানেল — কী কী করতে পারবেন</div>
+            <div style="display:grid;gap:6px">
+              <div>✅ <strong>সকল ইউজারের ফাইল দেখুন</strong> — প্রতিটি ইউজার আপলোড করা ফাইল অ্যাডমিন দেখতে ও কাজ করতে পারবে</div>
+              <div>✅ <strong>ইউজার তৈরি</strong> — নতুন অডিটর ইউজার তৈরি করুন, প্রত্যেক অডিটরের জন্য আলাদা অ্যাকাউন্ট</div>
+              <div>✅ <strong>ইউজার নিয়ন্ত্রণ</strong> — ইউজার সম্পাদনা, পাসওয়ার্ড বদল, ডিলিট করুন</div>
+              <div>✅ <strong>সব এন্ট্রি দেখুন</strong> — সকল ইউজারের করা এন্ট্রি একসাথে দেখুন</div>
+              <div>✅ <strong>যেকোনো ফাইল দেখুন</strong> — ডেটা ট্যাবে "👁 দেখুন" বাটনে প্রতিটি অডিটরের ফাইল দেখুন</div>
+              <div>✅ <strong>ডাউনলোড</strong> — যেকোনো অডিটরের ফাইল পৃথকভাবে ডাউনলোড করুন</div>
+              <div>✅ <strong>অ্যাক্টিভিটি লগ</strong> — কে কখন কী করেছে দেখুন</div>
+              <div>✅ <strong>ডেটা রিসেট</strong> — প্রয়োজনে সব ডেটা মুছুন</div>
+            </div>
+          </div>
+
+          <div style="background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;border-left:4px solid #2e86c1">
+            <div style="font-weight:700;color:#1a5276;margin-bottom:8px">👤 ইউজার প্যানেল — কী কী করতে পারবেন</div>
+            <div style="display:grid;gap:6px">
+              <div>✅ <strong>নিজের ফাইল আপলোড</strong> — প্রতিটি অডিটর নিজস্ব এক্সেল ফাইল আপলোড করবে</div>
+              <div>✅ <strong>সদস্য দেখুন</strong> — নিজের ফাইলের সকল সদস্য দেখতে পাবেন</div>
+              <div>✅ <strong>চেক লিস্ট পূরণ</strong> — প্রতিটি সদস্যের চেক লিস্ট Yes/মন্তব্য দিয়ে পূরণ করুন</div>
+              <div>✅ <strong>সরাসরি কল</strong> — মোবাইল নম্বরে ট্যাপ করলে কল চলে যাবে</div>
+              <div>✅ <strong>নিজের ডেটা ডাউনলোড</strong> — নিজের এন্ট্রি করা ডেটা ডাউনলোড করুন</div>
+              <div>✅ <strong>পাসওয়ার্ড বদল</strong> — নিজের পাসওয়ার্ড পরিবর্তন করুন</div>
+              <div>❌ এক্সেল আপলোড করতে পারবেন না</div>
+              <div>❌ অন্য ইউজারের ডেটা দেখতে পারবেন না</div>
+              <div>❌ ডেটা রিসেট করতে পারবেন না</div>
+            </div>
+          </div>
+
+          <div style="background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:12px;border-left:4px solid #1e8449">
+            <div style="font-weight:700;color:#1a5276;margin-bottom:8px">🚀 শুরু করার ধাপসমূহ</div>
+            <div style="display:grid;gap:8px;counter-reset:step">
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="background:#1a5276;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">১</span>
+                <span><strong>অ্যাডমিন লগইন</strong> করুন (ডিফল্ট: admin / admin123)</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="background:#1a5276;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">২</span>
+                <span><strong>অ্যাডমিন পাসওয়ার্ড পরিবর্তন</strong> করুন সেটিংস ট্যাব থেকে</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="background:#1a5276;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">৩</span>
+                <span><strong>এক্সেল ফাইল আপলোড</strong> করুন (হেডারে ☰ বা 📂 বাটন)</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="background:#1a5276;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">৪</span>
+                <span><strong>অডিটর ইউজার তৈরি</strong> করুন — প্রতিটি অডিটরের জন্য একটি ইউজার, অডিটরের নাম লিখে দিন</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="background:#1a5276;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">৫</span>
+                <span><strong>ইউজাররা লগইন করে</strong> নিজ নিজ সদস্যের চেক লিস্ট পূরণ করবে</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <span style="background:#1a5276;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">৬</span>
+                <span><strong>অ্যাডমিন ডেটা ট্যাব</strong> থেকে সব ইউজারের এন্ট্রি একসাথে ডাউনলোড করুন</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#fff3cd;border-radius:8px;padding:14px;font-size:12px;color:#856404">
+            <strong>⚠️ গুরুত্বপূর্ণ নোট:</strong> এই অ্যাপ LocalStorage ব্যবহার করে, তাই একই ডিভাইসের একই ব্রাউজারে সব ডেটা থাকে।
+            একাধিক ডিভাইসে রিয়েল-টাইম সিঙ্ক করতে অ্যাপটি একটি ওয়েব সার্ভারে (যেমন GitHub Pages) রাখুন।
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="adminTab_settings" class="admin-section">
+        <h4 style="font-size:14px;color:var(--primary);margin-bottom:14px">অ্যাপ সেটিংস</h4>
+        <div style="display:grid;gap:12px;max-width:400px">
+          <div style="background:#f8f9fa;border-radius:8px;padding:14px">
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px">অ্যাডমিন পাসওয়ার্ড পরিবর্তন</div>
+            <input type="password" id="newAdminPass" placeholder="নতুন পাসওয়ার্ড" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;margin-bottom:8px;font-family:var(--font)">
+            <input type="password" id="confirmAdminPass" placeholder="পাসওয়ার্ড নিশ্চিত করুন" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;margin-bottom:8px;font-family:var(--font)">
+            <button class="btn btn-primary" style="font-size:12px;padding:7px 16px" onclick="changeAdminPassword()">পরিবর্তন করুন</button>
+          </div>
+          <div style="background:#fff3cd;border-radius:8px;padding:14px">
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#856404">⚠️ সকল ডেটা রিসেট</div>
+            <div style="font-size:12px;color:#856404;margin-bottom:8px">সকল সদস্য ও এন্ট্রি ডেটা মুছে যাবে</div>
+            <button class="btn btn-danger" style="font-size:12px;padding:7px 16px" onclick="confirmReset()">রিসেট করুন</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addUserModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>➕ নতুন ইউজার তৈরি করুন</h3>
+      <button class="close-btn" onclick="closeModal('addUserModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>পুরো নাম</label>
+        <input type="text" id="newUserFullname" lang="bn" placeholder="ইউজারের নাম" style="font-family:var(--font)">
+      </div>
+      <div class="form-group">
+        <label>ইউজারনেম</label>
+        <input type="text" id="newUserUsername" placeholder="ইউজারনেম (ইংরেজিতে)" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>পাসওয়ার্ড</label>
+        <input type="password" id="newUserPassword" placeholder="পাসওয়ার্ড">
+      </div>
+      <div class="form-group">
+        <label>ভূমিকা</label>
+        <select id="newUserRole">
+          <option value="user">👤 ইউজার (User)</option>
+          <option value="admin">🔐 অ্যাডমিন (Admin)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>অডিটরের নাম</label>
+        <input type="text" id="newUserAuditorName" lang="bn" spellcheck="false" autocomplete="off"
+          placeholder="অডিটরের পুরো নাম লিখুন (বাংলায়)" style="font-family:var(--font)">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">ইউজার সকল সদস্য দেখতে পাবে — অডিটরের নাম শুধু পরিচয়ের জন্য</div>
+      </div>
+      <div id="addUserErr" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addUserModal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="createUser()">তৈরি করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="editUserModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ ইউজার সম্পাদনা</h3>
+      <button class="close-btn" onclick="closeModal('editUserModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editUserId">
+      <div class="form-group">
+        <label>পুরো নাম</label>
+        <input type="text" id="editUserFullname" lang="bn" style="font-family:var(--font)">
+      </div>
+      <div class="form-group">
+        <label>নতুন পাসওয়ার্ড (খালি রাখলে পরিবর্তন হবে না)</label>
+        <input type="password" id="editUserPassword" placeholder="নতুন পাসওয়ার্ড">
+      </div>
+      <div class="form-group">
+        <label>ভূমিকা</label>
+        <select id="editUserRole">
+          <option value="user">👤 ইউজার</option>
+          <option value="admin">🔐 অ্যাডমিন</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>অডিটরের নাম</label>
+        <input type="text" id="editUserAuditorName" lang="bn" spellcheck="false" autocomplete="off"
+          placeholder="অডিটরের পুরো নাম" style="font-family:var(--font)">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('editUserModal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="saveEditUser()">সেভ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET CONFIRM MODAL -->
+<div class="modal-overlay" id="resetModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><h3>⚠️ রিসেট নিশ্চিত করুন</h3><button class="close-btn" onclick="closeModal('resetModal')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:15px;margin-bottom:10px">সকল ডেটা মুছে যাবে। আপনি কি নিশ্চিত?</p>
+      <p style="color:var(--danger);font-size:13px">এই কাজ পূর্বাবস্থায় ফেরানো যাবে না।</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('resetModal')">বাতিল</button>
+      <button class="btn btn-danger" onclick="doReset()">হ্যাঁ, রিসেট করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CHECKLIST MODAL -->
+<div class="modal-overlay" id="addCheckModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><h3>➕ নতুন চেক আইটেম</h3><button class="close-btn" onclick="closeModal('addCheckModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>সেকশন</label>
+        <input type="text" id="newSection" lang="bn" spellcheck="false" autocomplete="off" placeholder="বাংলায় সেকশনের নাম" style="font-family:var(--font)">
+      </div>
+      <div class="form-group">
+        <label>সাব-সেকশন</label>
+        <input type="text" id="newSubSection" lang="bn" spellcheck="false" autocomplete="off" placeholder="বাংলায় সাব-সেকশনের নাম" style="font-family:var(--font)">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addCheckModal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="addNewCheckItem()">যোগ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER MENU -->
+<div id="userMenu" style="display:none;position:fixed;top:64px;right:12px;background:white;border:1px solid var(--border);border-radius:10px;padding:8px 0;z-index:1500;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
+  <div id="userMenuInfo" style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px"></div>
+  <button onclick="closeUserMenu();showAdminPanel()" id="userMenuAdmin" style="display:none;width:100%;text-align:left;padding:9px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:var(--font)">⚙️ অ্যাডমিন প্যানেল</button>
+  <button onclick="closeUserMenu();showChangePassModal()" style="width:100%;text-align:left;padding:9px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:var(--font)">🔑 পাসওয়ার্ড পরিবর্তন</button>
+  <button onclick="doLogout()" style="width:100%;text-align:left;padding:9px 16px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--danger);font-family:var(--font)">🚪 লগআউট</button>
+</div>
+
+<!-- CHANGE PASSWORD MODAL (for users) -->
+<div class="modal-overlay" id="changePassModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><h3>🔑 পাসওয়ার্ড পরিবর্তন</h3><button class="close-btn" onclick="closeModal('changePassModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>বর্তমান পাসওয়ার্ড</label><input type="password" id="cpOld" placeholder="বর্তমান পাসওয়ার্ড"></div>
+      <div class="form-group"><label>নতুন পাসওয়ার্ড</label><input type="password" id="cpNew" placeholder="নতুন পাসওয়ার্ড"></div>
+      <div class="form-group"><label>নিশ্চিত করুন</label><input type="password" id="cpConfirm" placeholder="পাসওয়ার্ড আবার লিখুন"></div>
+      <div id="cpErr" style="color:var(--danger);font-size:12px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('changePassModal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="doChangePass()">পরিবর্তন করুন</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ================================================================
+// AUTH STATE
+// ================================================================
+let auth = {
+  currentUser: null,   // { id, username, fullname, role, officer }
+  loginTab: 'admin'
+};
+
+// ================================================================
+// USER STORE  (persisted in localStorage)
+// ================================================================
+function loadUsers() {
+  try {
+    const d = localStorage.getItem('mva_users');
+    if (d) return JSON.parse(d);
+  } catch(e) {}
+  // Default: admin only
+  return [{
+    id: 'admin',
+    username: 'admin',
+    password: 'admin123',
+    fullname: 'সুপার অ্যাডমিন',
+    role: 'admin',
+    auditorName: '',
+    createdAt: new Date().toISOString(),
+    lastLogin: null
+  }];
+}
+function saveUsers(users) {
+  localStorage.setItem('mva_users', JSON.stringify(users));
+}
+function getUsers() { return loadUsers(); }
+
+// ================================================================
+// ACTIVITY LOG
+// ================================================================
+function logActivity(action, detail) {
+  try {
+    const logs = JSON.parse(localStorage.getItem('mva_logs') || '[]');
+    logs.unshift({
+      user: auth.currentUser ? auth.currentUser.fullname : '?',
+      username: auth.currentUser ? auth.currentUser.username : '?',
+      action, detail,
+      time: new Date().toISOString()
+    });
+    if (logs.length > 200) logs.splice(200);
+    localStorage.setItem('mva_logs', JSON.stringify(logs));
+  } catch(e) {}
+}
+function getLogs() {
+  try { return JSON.parse(localStorage.getItem('mva_logs') || '[]'); } catch(e) { return []; }
+}
+
+// ================================================================
+// APP STATE
+// ================================================================
+let appState = {
+  members: [], checklistHeaders: [], entries: {},
+  customChecks: [], currentMemberId: null,
+  filterStatus: 'all', originalData: [],
+  adminEditingUser: null, adminEditingRole: null
+};
+
+function getStorageKey() {
+  if (!auth.currentUser) return null;
+  // If admin is currently editing another user's file, save to that user's key
+  if (auth.currentUser.role === 'admin' && appState.adminEditingUser && appState.adminEditingUser !== 'admin') {
+    return appState.adminEditingRole === 'admin' ? 'mva_data_admin' : 'mva_data_' + appState.adminEditingUser;
+  }
+  return auth.currentUser.role === 'admin' ? 'mva_data_admin' : 'mva_data_' + auth.currentUser.username;
+}
+
+function loadState() {
+  try {
+    const key = getStorageKey();
+    if (!key) return;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const p = JSON.parse(saved);
+      appState.members = p.members || [];
+      appState.checklistHeaders = p.checklistHeaders || [];
+      appState.entries = p.entries || {};
+      appState.customChecks = p.customChecks || [];
+      appState.originalData = p.originalData || [];
+    }
+  } catch(e) {}
+}
+function saveState() {
+  try {
+    const key = getStorageKey();
+    if (!key) return;
+    localStorage.setItem(key, JSON.stringify({
+      members: appState.members,
+      checklistHeaders: appState.checklistHeaders,
+      entries: appState.entries,
+      customChecks: appState.customChecks,
+      originalData: appState.originalData
+    }));
+  } catch(e) {}
+}
+
+// ================================================================
+// LOGIN / LOGOUT
+// ================================================================
+function switchLoginTab(tab, btn) {
+  auth.loginTab = tab;
+  document.querySelectorAll('.login-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const hint = document.getElementById('loginHint');
+  if (tab === 'admin') {
+    hint.innerHTML = '<strong>ডিফল্ট অ্যাডমিন:</strong><br>ইউজারনেম: <code>admin</code> &nbsp;|&nbsp; পাসওয়ার্ড: <code>admin123</code>';
+    hint.style.display = 'block';
+  } else {
+    hint.innerHTML = 'অ্যাডমিন কর্তৃক প্রদত্ত ইউজারনেম ও পাসওয়ার্ড ব্যবহার করুন';
+    hint.style.display = 'block';
+  }
+}
+
+function doLogin() {
+  const uname = document.getElementById('loginUsername').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+
+  if (!uname || !pass) { err.textContent = '❌ ইউজারনেম ও পাসওয়ার্ড দিন'; err.style.display = 'block'; return; }
+
+  const users = getUsers();
+  const user = users.find(u => u.username === uname && u.password === pass);
+
+  if (!user) { err.textContent = '❌ ভুল ইউজারনেম বা পাসওয়ার্ড'; err.style.display = 'block'; return; }
+
+  // Tab check
+  if (auth.loginTab === 'admin' && user.role !== 'admin') {
+    err.textContent = '❌ আপনি অ্যাডমিন নন। ইউজার ট্যাব ব্যবহার করুন।'; err.style.display = 'block'; return;
+  }
+  if (auth.loginTab === 'user' && user.role === 'admin') {
+    err.textContent = '❌ অ্যাডমিন লগইনের জন্য অ্যাডমিন ট্যাব ব্যবহার করুন।'; err.style.display = 'block'; return;
+  }
+
+  // Update last login
+  user.lastLogin = new Date().toISOString();
+  saveUsers(users);
+
+  auth.currentUser = user;
+  localStorage.setItem('mva_session', JSON.stringify({ username: user.username, time: Date.now() }));
+  logActivity('লগইন', user.fullname + ' লগইন করেছেন');
+  startApp();
+}
+
+function doLogout() {
+  logActivity('লগআউট', auth.currentUser.fullname + ' লগআউট করেছেন');
+  auth.currentUser = null;
+  localStorage.removeItem('mva_session');
+  appState = { members:[], checklistHeaders:[], entries:{}, customChecks:[], currentMemberId:null, filterStatus:'all', originalData:[], adminEditingUser:null, adminEditingRole:null };
+  closeUserMenu();
+  document.getElementById('appWrap').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+function restoreSession() {
+  try {
+    const s = localStorage.getItem('mva_session');
+    if (!s) return false;
+    const sess = JSON.parse(s);
+    if (Date.now() - sess.time > 12 * 60 * 60 * 1000) { localStorage.removeItem('mva_session'); return false; }
+    const users = getUsers();
+    const user = users.find(u => u.username === sess.username);
+    if (!user) return false;
+    auth.currentUser = user;
+    return true;
+  } catch(e) { return false; }
+}
+
+function startApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'block';
+
+  const u = auth.currentUser;
+  document.getElementById('userAvatar').textContent = (u.auditorName || u.fullname || u.username).slice(0,2).toUpperCase();
+  document.getElementById('userDisplayName').textContent = u.auditorName || u.fullname || u.username;
+  const rb = document.getElementById('userRoleBadge');
+  rb.textContent = u.role === 'admin' ? 'অ্যাডমিন' : 'অডিটর';
+  rb.className = 'role-badge ' + (u.role === 'admin' ? 'role-admin' : 'role-user');
+  document.getElementById('welcomeName').textContent = u.auditorName || u.fullname || u.username;
+
+  // Admin sees admin panel; all users can upload their own file
+  if (u.role === 'admin') {
+    document.getElementById('adminPanelBtn').style.display = 'flex';
+    document.getElementById('userMenuAdmin').style.display = 'block';
+  } else {
+    document.getElementById('adminPanelBtn').style.display = 'none';
+    document.getElementById('userMenuAdmin').style.display = 'none';
+  }
+  // Everyone gets upload + reset
+  document.getElementById('uploadBtn').style.display = 'flex';
+  document.getElementById('rstBtn').style.display = 'none'; // shown after upload
+
+  loadState();
+
+  if (appState.members.length > 0) {
+    initApp();
+  } else {
+    showUserNoDataScreen();
+  }
+}
+
+function showUserNoDataScreen() {
+  // All users see upload screen — each uploads their own file
+  document.getElementById('welcomeScreen').style.display = 'block';
+  document.getElementById('appScreen').style.display = 'none';
+  const u = auth.currentUser;
+  const name = escHtml(u.auditorName || u.fullname || u.username);
+  document.getElementById('welcomeScreen').innerHTML = `
+    <div class="welcome-screen">
+      <div style="font-size:48px;margin-bottom:16px">📊</div>
+      <h2>স্বাগতম, ${name}</h2>
+      <p>আপনার এক্সেল ফাইল আপলোড করে কাজ শুরু করুন</p>
+      <div class="upload-zone" onclick="document.getElementById('mainUploadInput').click()">
+        <div style="font-size:36px;margin-bottom:8px">📁</div>
+        <div style="font-weight:600;font-size:14px;color:var(--primary)">এক্সেল ফাইল আপলোড করুন</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">.xlsx বা .xls ফাইল</div>
+        <button class="upload-btn">ফাইল বেছে নিন</button>
+      </div>
+      <input type="file" id="mainUploadInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+      <p style="margin-top:12px;font-size:11px;color:var(--text-muted)">⚠️ পেজ রিলোড করলেও ডেটা মুছবে না</p>
+    </div>`;
+}
+
+// ================================================================
+// USER MENU
+// ================================================================
+function showUserMenu() {
+  const u = auth.currentUser;
+  document.getElementById('userMenuInfo').innerHTML = `
+    <div style="font-weight:700">${escHtml(u.fullname || u.username)}</div>
+    <div style="font-size:11px;color:var(--text-muted)">${u.role === 'admin' ? '🔐 অ্যাডমিন' : '👤 অডিটর'}${u.auditorName ? ' | অডিটর: ' + escHtml(u.auditorName) : ''}</div>`;
+  document.getElementById('userMenu').style.display = 'block';
+}
+function closeUserMenu() { document.getElementById('userMenu').style.display = 'none'; }
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('userMenu');
+  const chip = document.getElementById('userChip');
+  if (menu.style.display !== 'none' && !menu.contains(e.target) && !chip.contains(e.target)) closeUserMenu();
+});
+
+function showChangePassModal() {
+  document.getElementById('cpOld').value = '';
+  document.getElementById('cpNew').value = '';
+  document.getElementById('cpConfirm').value = '';
+  document.getElementById('cpErr').style.display = 'none';
+  document.getElementById('changePassModal').style.display = 'flex';
+}
+function doChangePass() {
+  const old = document.getElementById('cpOld').value;
+  const nw = document.getElementById('cpNew').value;
+  const cf = document.getElementById('cpConfirm').value;
+  const err = document.getElementById('cpErr');
+  if (old !== auth.currentUser.password) { err.textContent = 'বর্তমান পাসওয়ার্ড ভুল'; err.style.display = 'block'; return; }
+  if (nw.length < 4) { err.textContent = 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষর হতে হবে'; err.style.display = 'block'; return; }
+  if (nw !== cf) { err.textContent = 'পাসওয়ার্ড মেলেনি'; err.style.display = 'block'; return; }
+  const users = getUsers();
+  const u = users.find(u2 => u2.username === auth.currentUser.username);
+  if (u) { u.password = nw; saveUsers(users); auth.currentUser.password = nw; }
+  closeModal('changePassModal');
+  showToast('পাসওয়ার্ড পরিবর্তন হয়েছে ✓', 'success');
+  logActivity('পাসওয়ার্ড', auth.currentUser.fullname + ' পাসওয়ার্ড পরিবর্তন করেছেন');
+}
+
+// ================================================================
+// ADMIN PANEL
+// ================================================================
+function showAdminPanel() {
+  if (auth.currentUser.role !== 'admin') return;
+  renderUserCards();
+  renderActivityLog();
+  renderUserFileCards();
+  document.getElementById('adminPanelModal').style.display = 'flex';
+}
+
+function switchAdminTab(tab, el) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('adminTab_' + tab).classList.add('active');
+  if (tab === 'activity') renderActivityLog();
+  if (tab === 'data') renderUserFileCards();
+}
+
+function renderUserCards() {
+  const users = getUsers();
+  const grid = document.getElementById('userCardGrid');
+  grid.innerHTML = users.map(u => {
+    const entryCount = countUserEntries(u.username, u.role);
+    const isOnline = isUserOnline(u.username);
+    const initials = (u.fullname || u.username).slice(0,2).toUpperCase();
+    const lastLogin = u.lastLogin ? new Date(u.lastLogin).toLocaleString('bn-BD') : 'কখনো না';
+    return `
+    <div class="user-card">
+      <div class="online-indicator">
+        <span class="status-dot ${isOnline ? 'dot-online' : 'dot-offline'}"></span>
+        <span style="font-size:11px;color:var(--text-muted)">${isOnline ? 'অনলাইন' : 'অফলাইন'}</span>
+      </div>
+      <div class="user-card-head">
+        <div class="user-avatar ${u.role === 'admin' ? 'avatar-admin' : 'avatar-user'}">${initials}</div>
+        <div>
+          <div class="user-card-name">${escHtml(u.fullname || u.username)}</div>
+          <div class="user-card-meta">@${escHtml(u.username)} · ${u.role === 'admin' ? '🔐 অ্যাডমিন' : '👤 অডিটর'}</div>
+          ${u.auditorName ? `<div class="user-card-meta">🔍 অডিটর: ${escHtml(u.auditorName)}</div>` : ''}
+        </div>
+      </div>
+      <div class="user-card-stats">
+        <div class="mini-stat"><div class="num">${entryCount}</div><div class="lbl">এন্ট্রি</div></div>
+        <div class="mini-stat"><div style="font-size:11px;font-weight:600;color:var(--primary);margin-top:2px">${lastLogin}</div><div class="lbl">শেষ লগইন</div></div>
+      </div>
+      ${u.username !== 'admin' ? `
+      <div class="user-actions">
+        <button class="btn-xs btn-xs-info" onclick="openEditUser('${u.id}')">✏️ সম্পাদনা</button>
+        <button class="btn-xs btn-xs-warning" onclick="resetUserData('${u.username}')">🗑️ ডেটা মুছুন</button>
+        <button class="btn-xs btn-xs-danger" onclick="deleteUser('${u.id}')">❌ ডিলিট</button>
+      </div>` : `<div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:4px 0">সুপার অ্যাডমিন — ডিলিট করা যাবে না</div>`}
+    </div>`;
+  }).join('');
+}
+
+function isUserOnline(username) {
+  try {
+    const s = localStorage.getItem('mva_session');
+    if (!s) return false;
+    const sess = JSON.parse(s);
+    return sess.username === username && Date.now() - sess.time < 30 * 60 * 1000;
+  } catch(e) { return false; }
+}
+
+function getUserFileInfo(username, role) {
+  const key = role === 'admin' ? 'mva_data_admin' : 'mva_data_' + username;
+  try {
+    const d = localStorage.getItem(key);
+    if (!d) return { total: 0, done: 0, entries: 0 };
+    const p = JSON.parse(d);
+    if (!p.members || !p.members.length) return { total: 0, done: 0, entries: 0 };
+    const done = p.members.filter(m => {
+      const e = (p.entries||{})[m.id];
+      if (!e) return false;
+      const ks = [...(p.checklistHeaders||[]).map(h=>'col_'+h.colIdx), ...(p.customChecks||[]).map(c=>'custom_'+c.id)];
+      return ks.some(k => e[k] && (e[k].yes || (e[k].comment||'').trim()));
+    }).length;
+    const entryCount = Object.keys(p.entries||{}).length;
+    return { total: p.members.length, done, entries: entryCount };
+  } catch(e) { return { total: 0, done: 0, entries: 0 }; }
+}
+
+function countUserEntries(username, role) {
+  return getUserFileInfo(username, role).entries;
+}
+
+function renderActivityLog() {
+  const logs = getLogs();
+  const el = document.getElementById('activityList');
+  if (logs.length === 0) { el.innerHTML = '<li style="padding:20px;text-align:center;color:var(--text-muted)">কোনো কার্যক্রম নেই</li>'; return; }
+  el.innerHTML = logs.slice(0, 50).map(l => {
+    const icons = { 'লগইন':'🔑','লগআউট':'🚪','আপলোড':'📂','ডাউনলোড':'⬇️','এন্ট্রি':'✏️','রিসেট':'🗑️','ইউজার':'👤','পাসওয়ার্ড':'🔐' };
+    const icon = Object.keys(icons).find(k => l.action.includes(k)) ? icons[Object.keys(icons).find(k => l.action.includes(k))] : '📝';
+    const t = new Date(l.time);
+    const timeStr = t.toLocaleDateString('bn-BD') + ' ' + t.toLocaleTimeString('bn-BD', {hour:'2-digit',minute:'2-digit'});
+    return `<li class="activity-item">
+      <div class="activity-icon">${icon}</div>
+      <div class="activity-text"><strong>${escHtml(l.user)}</strong> — ${escHtml(l.detail)}<div class="activity-time">${timeStr}</div></div>
+    </li>`;
+  }).join('');
+}
+
+function renderDataOverview() { renderUserFileCards(); }
+
+function downloadMergedExcel() { showToast('ডেটা ট্যাব থেকে প্রতিটি ইউজারের ফাইল আলাদা ডাউনলোড করুন', 'info'); }
+
+function adminReturnToOwnFile() {
+  appState.adminEditingUser = null;
+  appState.adminEditingRole = null;
+  document.getElementById('adminFileBanner').style.display = 'none';
+  loadState();
+  if (appState.members.length > 0) {
+    initApp();
+    showToast('নিজের ফাইলে ফিরে এসেছেন', 'info');
+  } else {
+    showUserNoDataScreen();
+    showToast('নিজের কোনো ফাইল নেই', 'info');
+  }
+}
+
+
+function adminLoadUserFile(username, role) {
+  if (auth.currentUser.role !== 'admin') return;
+  const key = role === 'admin' ? 'mva_data_admin' : 'mva_data_' + username;
+  try {
+    const d = localStorage.getItem(key);
+    if (!d) { showToast('এই ইউজারের ফাইল পাওয়া যায়নি', 'error'); return; }
+    const p = JSON.parse(d);
+    if (!p.members || !p.members.length) { showToast('ফাইলে কোনো সদস্য নেই', 'error'); return; }
+    appState.members = p.members;
+    appState.checklistHeaders = p.checklistHeaders || [];
+    appState.customChecks = p.customChecks || [];
+    appState.originalData = p.originalData || [];
+    appState.entries = p.entries || {};
+    appState.adminEditingUser = username;
+    appState.adminEditingRole = role;
+    appState.currentMemberId = null;
+    closeModal('adminPanelModal');
+    const banner = document.getElementById('adminFileBanner');
+    const bannerText = document.getElementById('adminFileBannerText');
+    if (banner && bannerText) {
+      bannerText.textContent = '👁 এখন @' + username + '-এর ফাইল দেখছেন';
+      banner.style.display = 'flex';
+    }
+    initApp();
+    showToast('✓ @' + username + '-এর ফাইল লোড হয়েছে', 'success');
+    logActivity('ভিউ', 'অ্যাডমিন @' + username + '-এর ফাইল দেখছেন');
+  } catch(e) { showToast('লোড করতে সমস্যা: ' + e.message, 'error'); }
+}
+
+function adminDownloadUserFile(username, role, displayName) {
+  const key = role === 'admin' ? 'mva_data_admin' : 'mva_data_' + username;
+  try {
+    const d = localStorage.getItem(key);
+    if (!d) { showToast('ফাইল পাওয়া যায়নি', 'error'); return; }
+    const p = JSON.parse(d);
+    if (!p.originalData || !p.originalData.length) { showToast('মূল এক্সেল ডেটা নেই', 'error'); return; }
+    const data = p.originalData.map(r => [...r]);
+    const headers = p.checklistHeaders || [];
+    const customs = p.customChecks || [];
+    const entries = p.entries || {};
+    const members = p.members || [];
+    const maxCol = headers.length ? Math.max(...headers.map(h=>h.colIdx)) : 112;
+    members.forEach(m => {
+      const entry = entries[m.id]; if (!entry) return;
+      const r = m.rowIdx; if (!data[r]) return;
+      headers.forEach(h => {
+        const v = entry['col_'+h.colIdx];
+        if (v) { while(data[r].length<=h.colIdx) data[r].push(''); data[r][h.colIdx]=v.yes?'Yes':(v.comment||''); }
+      });
+      customs.forEach((c,ci) => {
+        const v = entry['custom_'+c.id]; const col=maxCol+1+ci;
+        while(data[r].length<=col) data[r].push('');
+        if (v) data[r][col]=v.yes?'Yes':(v.comment||'');
+      });
+    });
+    if (customs.length) {
+      const sc=maxCol+1;
+      if (!data[0]) data[0]=[]; if (!data[1]) data[1]=[];
+      customs.forEach((c,ci)=>{ const col=sc+ci; while(data[0].length<=col)data[0].push(''); while(data[1].length<=col)data[1].push(''); data[0][col]=c.section; data[1][col]=c.subSection; });
+    }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), 'Sheet1');
+    XLSX.writeFile(wb, displayName + '_যাচাই.xlsx');
+    showToast('ডাউনলোড শুরু হয়েছে ✓', 'success');
+    logActivity('ডাউনলোড', displayName + '-এর ফাইল ডাউনলোড করা হয়েছে');
+  } catch(e) { showToast('সমস্যা: '+e.message, 'error'); }
+}
+
+function viewAllEntriesSummary() { renderUserFileCards(); }
+
+function refreshDataTab() { renderUserFileCards(); showToast("রিফ্রেশ হয়েছে", "info"); }
+
+function renderUserFileCards() {
+  const container = document.getElementById('userFileCards');
+  if (!container) return;
+  const users = getUsers();
+  if (!users.length) { container.innerHTML = '<div class="empty-state"><div class="icon">👥</div><p>কোনো ইউজার নেই</p></div>'; return; }
+  container.innerHTML = users.map(u => {
+    const key = u.role === 'admin' ? 'mva_data_admin' : 'mva_data_' + u.username;
+    let fi = null;
+    try {
+      const d = localStorage.getItem(key);
+      if (d) {
+        const p = JSON.parse(d);
+        if (p.members && p.members.length > 0) {
+          const done = p.members.filter(m => {
+            const e = (p.entries||{})[m.id];
+            if (!e) return false;
+            const ks = [...(p.checklistHeaders||[]).map(h=>'col_'+h.colIdx), ...(p.customChecks||[]).map(c=>'custom_'+c.id)];
+            return ks.some(k => e[k] && (e[k].yes || (e[k].comment||'').trim()));
+          }).length;
+          fi = { total: p.members.length, done };
+        }
+      }
+    } catch(e2) {}
+    const online = isUserOnline(u.username);
+    const initials = (u.auditorName||u.fullname||u.username).slice(0,2).toUpperCase();
+    const pct = fi ? Math.round(fi.done/fi.total*100) : 0;
+    const isMe = u.username === auth.currentUser.username;
+    return `
+    <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="user-avatar ${u.role==='admin'?'avatar-admin':'avatar-user'}" style="width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px">${escHtml(u.fullname||u.username)} ${isMe?'<span style="font-size:10px;background:#e8f4fd;color:#1a5276;padding:1px 6px;border-radius:8px">আমি</span>':''}</div>
+          <div style="font-size:11px;color:var(--text-muted)">@${escHtml(u.username)}${u.auditorName?' · 🔍 '+escHtml(u.auditorName):''} · <span class="role-badge ${u.role==='admin'?'role-admin':'role-user'}">${u.role==='admin'?'অ্যাডমিন':'অডিটর'}</span></div>
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px">
+          <span class="status-dot ${online?'dot-online':'dot-offline'}"></span>${online?'অনলাইন':'অফলাইন'}
+        </span>
+      </div>
+      ${fi ? `
+        <div style="background:#f0f4f8;border-radius:8px;padding:10px;margin-bottom:10px">
+          <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
+            <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--primary)">${fi.total}</div><div style="font-size:10px;color:var(--text-muted)">সদস্য</div></div>
+            <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--success)">${fi.done}</div><div style="font-size:10px;color:var(--text-muted)">সম্পন্ন</div></div>
+            <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#adb5bd">${fi.total-fi.done}</div><div style="font-size:10px;color:var(--text-muted)">বাকি</div></div>
+            <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--accent)">${pct}%</div><div style="font-size:10px;color:var(--text-muted)">হার</div></div>
+          </div>
+          <div style="background:#dee2e6;border-radius:4px;height:6px"><div style="background:var(--success);border-radius:4px;height:6px;width:${pct}%"></div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${!isMe ? `<button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="adminLoadUserFile('${u.username}','${u.role}')">📂 এই ফাইলে কাজ করুন</button>` : ''}
+          <button class="btn btn-success" style="font-size:12px;padding:6px 12px" onclick="adminDownloadUserFile('${u.username}','${u.role}','${escAttr(u.auditorName||u.fullname||u.username)}')">⬇️ ডাউনলোড</button>
+        </div>` :
+        `<div style="background:#f8f9fa;border-radius:8px;padding:12px;text-align:center;color:var(--text-muted);font-size:13px">📭 এখনো কোনো এক্সেল আপলোড করা হয়নি</div>`}
+    </div>`;
+  }).join('');
+}
+
+function populateOfficerDropdowns() { /* officer assign removed — auditors see all members */ }
+
+// ================================================================
+// USER CRUD
+// ================================================================
+function showAddUserModal() {
+  document.getElementById('newUserFullname').value = '';
+  document.getElementById('newUserUsername').value = '';
+  document.getElementById('newUserPassword').value = '';
+  document.getElementById('newUserRole').value = 'user';
+  document.getElementById('newUserAuditorName').value = '';
+  document.getElementById('addUserErr').style.display = 'none';
+  document.getElementById('addUserModal').style.display = 'flex';
+}
+
+function createUser() {
+  const fullname = document.getElementById('newUserFullname').value.trim();
+  const username = document.getElementById('newUserUsername').value.trim().toLowerCase();
+  const password = document.getElementById('newUserPassword').value;
+  const role = document.getElementById('newUserRole').value;
+  const auditorName = document.getElementById('newUserAuditorName').value.trim();
+  const err = document.getElementById('addUserErr');
+
+  if (!fullname || !username || !password) { err.textContent = 'সব তথ্য পূরণ করুন'; err.style.display = 'block'; return; }
+  if (password.length < 4) { err.textContent = 'পাসওয়ার্ড কমপক্ষে ৪ অক্ষর'; err.style.display = 'block'; return; }
+  if (!/^[a-z0-9_]+$/.test(username)) { err.textContent = 'ইউজারনেম শুধু ইংরেজি হরফ, সংখ্যা ও _ ব্যবহার করুন'; err.style.display = 'block'; return; }
+
+  const users = getUsers();
+  if (users.find(u => u.username === username)) { err.textContent = 'এই ইউজারনেম ইতিমধ্যে আছে'; err.style.display = 'block'; return; }
+
+  users.push({ id: 'u_' + Date.now(), username, password, fullname, role, auditorName, createdAt: new Date().toISOString(), lastLogin: null });
+  saveUsers(users);
+  closeModal('addUserModal');
+  renderUserCards();
+  renderDataOverview();
+  showToast('নতুন ইউজার তৈরি হয়েছে ✓', 'success');
+  logActivity('ইউজার', 'নতুন ইউজার তৈরি: ' + fullname + ' (@' + username + ')');
+}
+
+function openEditUser(uid) {
+  const users = getUsers();
+  const u = users.find(x => x.id === uid);
+  if (!u) return;
+  document.getElementById('editUserId').value = uid;
+  document.getElementById('editUserFullname').value = u.fullname || '';
+  document.getElementById('editUserPassword').value = '';
+  document.getElementById('editUserRole').value = u.role;
+  document.getElementById('editUserAuditorName').value = u.auditorName || '';
+  document.getElementById('editUserModal').style.display = 'flex';
+}
+
+function saveEditUser() {
+  const uid = document.getElementById('editUserId').value;
+  const fullname = document.getElementById('editUserFullname').value.trim();
+  const password = document.getElementById('editUserPassword').value;
+  const role = document.getElementById('editUserRole').value;
+  const auditorName = document.getElementById('editUserAuditorName').value.trim();
+  if (!fullname) { showToast('নাম দিন', 'error'); return; }
+  const users = getUsers();
+  const u = users.find(x => x.id === uid);
+  if (!u) return;
+  u.fullname = fullname;
+  u.role = role;
+  u.auditorName = auditorName;
+  if (password.length >= 4) u.password = password;
+  saveUsers(users);
+  closeModal('editUserModal');
+  renderUserCards();
+  showToast('ইউজার আপডেট হয়েছে ✓', 'success');
+  logActivity('ইউজার', 'ইউজার সম্পাদনা: ' + fullname);
+}
+
+function deleteUser(uid) {
+  if (!confirm('এই ইউজার ডিলিট করবেন?')) return;
+  const users = getUsers().filter(u => u.id !== uid);
+  saveUsers(users);
+  renderUserCards();
+  renderDataOverview();
+  showToast('ইউজার ডিলিট হয়েছে', 'info');
+}
+
+function resetUserData(username) {
+  if (!confirm('@' + username + ' এর সকল এন্ট্রি ডেটা মুছবেন?')) return;
+  const key = 'mva_data_' + username;
+  const d = localStorage.getItem(key);
+  if (d) {
+    try {
+      const p = JSON.parse(d);
+      p.entries = {};
+      localStorage.setItem(key, JSON.stringify(p));
+    } catch(e) { localStorage.removeItem(key); }
+  }
+  renderUserCards();
+  showToast('@' + username + ' এর ডেটা মুছে গেছে', 'info');
+}
+
+function changeAdminPassword() {
+  const nw = document.getElementById('newAdminPass').value;
+  const cf = document.getElementById('confirmAdminPass').value;
+  if (nw.length < 4) { showToast('পাসওয়ার্ড কমপক্ষে ৪ অক্ষর', 'error'); return; }
+  if (nw !== cf) { showToast('পাসওয়ার্ড মেলেনি', 'error'); return; }
+  const users = getUsers();
+  const admin = users.find(u => u.username === auth.currentUser.username);
+  if (admin) { admin.password = nw; saveUsers(users); auth.currentUser.password = nw; }
+  document.getElementById('newAdminPass').value = '';
+  document.getElementById('confirmAdminPass').value = '';
+  showToast('অ্যাডমিন পাসওয়ার্ড পরিবর্তন হয়েছে ✓', 'success');
+}
+
+// ================================================================
+// FILE UPLOAD
+// ================================================================
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, { type:'array', cellDates:true, cellText:true, codepage:65001 });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rawData = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:false, blankrows:true });
+      const decodedData = rawData.map(row => Array.isArray(row) ? row.map(c => (c||'').toString()) : row);
+      parseExcelData(decodedData);
+      showToast('ফাইল লোড হয়েছে! ' + appState.members.length + ' জন সদস্য', 'success');
+      // Reset admin-editing-user when uploading own file
+      appState.adminEditingUser = null; appState.adminEditingRole = null;
+      logActivity('আপলোড', appState.members.length + ' জন সদস্যের ফাইল আপলোড হয়েছে');
+      saveState();
+      initApp();
+    } catch(err) { showToast('ফাইল পড়তে সমস্যা: ' + err.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseExcelData(rawData) {
+  if (rawData.length < 3) return;
+  appState.originalData = rawData;
+  const r0 = rawData[0] || [], r1 = rawData[1] || [];
+  const COL_AD = 29, COL_DI = 112;
+  appState.checklistHeaders = [];
+  for (let c = COL_AD; c <= Math.min(COL_DI, r0.length - 1); c++) {
+    const sec = (r0[c]||'').toString().trim(), sub = (r1[c]||'').toString().trim();
+    if (sec || sub) appState.checklistHeaders.push({ colIdx:c, section:sec, subSection:sub });
+  }
+  appState.members = [];
+  for (let r = 2; r < rawData.length; r++) {
+    const row = rawData[r];
+    if (!row || !row[2]) continue;
+    appState.members.push({
+      id: r - 2, rowIdx: r,
+      officer:(row[0]||'').toString().trim(), centerNo:(row[1]||'').toString().trim(),
+      memberNo:(row[2]||'').toString().trim(), memberName:(row[3]||'').toString().trim(),
+      mobile:(row[5]||'').toString().trim(), guardianName:(row[7]||'').toString().trim(),
+      loanType:(row[20]||'').toString().trim(), loanDate:(row[21]||'').toString().trim(),
+      loanAmount:(row[22]||'').toString().trim(), loanBalance:(row[23]||'').toString().trim(),
+      odi:(row[24]||'').toString().trim()
+    });
+  }
+}
+
+// ================================================================
+// APP INIT
+// ================================================================
+function initApp() {
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('dlBtn').style.display = 'flex';
+  document.getElementById('headerStats').style.display = 'flex';
+  document.getElementById('mainContent').classList.remove('full-width');
+  document.getElementById('sidebar').classList.remove('hidden');
+  if (window.innerWidth > 768) document.getElementById('mainContent').style.marginLeft = 'var(--sidebar-w)';
+  document.getElementById('rstBtn').style.display = 'flex'; // all users can reset their own file
+  populateFilters();
+  filterMembers();
+  updateStats();
+}
+
+function getVisibleMembers() {
+  // All users (auditors) see all members — no officer filter
+  return appState.members;
+}
+
+function populateFilters() {
+  const visible = getVisibleMembers();
+  const officers = [...new Set(visible.map(m=>m.officer).filter(Boolean))].sort();
+  const centers = [...new Set(visible.map(m=>m.centerNo).filter(Boolean))].sort((a,b)=>a-b);
+  const oSel = document.getElementById('officerFilter');
+  const cSel = document.getElementById('centerFilter');
+  oSel.innerHTML = '<option value="">সকল অফিসার</option>';
+  cSel.innerHTML = '<option value="">সকল কেন্দ্র</option>';
+  officers.forEach(o => oSel.innerHTML += `<option value="${escAttr(o)}">${escHtml(o)}</option>`);
+  centers.forEach(c => cSel.innerHTML += `<option value="${escAttr(c)}">কেন্দ্র ${escHtml(c)}</option>`);
+}
+
+function updateStats() {
+  const visible = getVisibleMembers();
+  const total = visible.length;
+  const done = visible.filter(m => isMemberDone(m.id)).length;
+  const pending = total - done;
+  document.getElementById('hTotal').textContent = total;
+  document.getElementById('hDone').textContent = done;
+  document.getElementById('hPending').textContent = pending;
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card total-stat"><div class="num">${total}</div><div class="lbl">মোট সদস্য</div></div>
+    <div class="stat-card done-stat"><div class="num">${done}</div><div class="lbl">✅ সম্পন্ন</div></div>
+    <div class="stat-card pending-stat"><div class="num">${pending}</div><div class="lbl">⏳ বাকি</div></div>
+    <div class="stat-card" style="border-left:3px solid var(--accent)">
+      <div class="num" style="color:var(--accent)">${total>0?Math.round(done/total*100):0}%</div>
+      <div class="lbl">সম্পন্নের হার</div>
+    </div>`;
+}
+
+function isMemberDone(memberId) {
+  const entry = appState.entries[memberId];
+  if (!entry) return false;
+  const keys = [
+    ...appState.checklistHeaders.map(h=>'col_'+h.colIdx),
+    ...appState.customChecks.map(c=>'custom_'+c.id)
+  ];
+  return keys.length > 0 && keys.some(k => entry[k] && (entry[k].yes || (entry[k].comment||'').trim()));
+}
+
+// ================================================================
+// FILTERS & SEARCH
+// ================================================================
+function setFilter(status, btn) {
+  appState.filterStatus = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterMembers();
+}
+function filterMembers() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const officer = document.getElementById('officerFilter').value;
+  const center = document.getElementById('centerFilter').value;
+  const status = appState.filterStatus;
+  const visible = getVisibleMembers();
+  const filtered = visible.filter(m => {
+    if (q && !(m.memberName.toLowerCase().includes(q) || m.memberNo.toLowerCase().includes(q) || m.mobile.includes(q))) return false;
+    if (officer && m.officer !== officer) return false;
+    if (center && m.centerNo !== center) return false;
+    if (status === 'done' && !isMemberDone(m.id)) return false;
+    if (status === 'pending' && isMemberDone(m.id)) return false;
+    return true;
+  });
+  renderMemberList(filtered, q);
+}
+
+function renderMemberList(members, hl='') {
+  const c = document.getElementById('memberList');
+  if (!members.length) { c.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>কোনো সদস্য পাওয়া যায়নি</p></div>'; return; }
+  c.innerHTML = members.map(m => {
+    const done = isMemberDone(m.id);
+    const name = hl ? m.memberName.replace(new RegExp(hl.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), s=>`<mark class="highlight">${s}</mark>`) : escHtml(m.memberName);
+    return `<div class="member-item ${done?'done':'pending'} ${appState.currentMemberId===m.id?'active':''}" onclick="selectMember(${m.id})">
+      <div class="member-name">${name||'অজানা'}</div>
+      <div class="member-meta">${escHtml(m.memberNo)} | কেন্দ্র: ${escHtml(m.centerNo||'-')} | ${escHtml(m.officer||'-')}</div>
+      <span class="member-badge ${done?'badge-done':'badge-pending'}">${done?'✅':'⏳'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+// MEMBER DETAIL
+// ================================================================
+function selectMember(memberId) {
+  appState.currentMemberId = memberId;
+  const m = appState.members.find(x => x.id === memberId);
+  if (!m) return;
+  filterMembers();
+  const initials = (m.memberName||'?').slice(0,2).toUpperCase();
+  document.getElementById('memberDetail').innerHTML = `
+    <div class="member-card">
+      <div class="member-card-header">
+        <div class="member-avatar">${initials}</div>
+        <div class="member-info">
+          <h2>${escHtml(m.memberName||'অজানা')}</h2>
+          <div class="sub">সদস্য নং: ${escHtml(m.memberNo)} | কেন্দ্র: ${escHtml(m.centerNo||'-')} | ${escHtml(m.officer||'-')}</div>
+        </div>
+      </div>
+      <div class="member-card-body">
+        <div class="info-grid">
+          <div class="info-item"><label>সদস্য নং</label><div class="val">${escHtml(m.memberNo||'-')}</div></div>
+          <div class="info-item"><label>সদস্যের নাম</label><div class="val">${escHtml(m.memberName||'-')}</div></div>
+          <div class="info-item"><label>মোবাইল নং</label><div class="val">
+            ${m.mobile ? `<a class="val phone" href="tel:${escAttr(m.mobile)}">${escHtml(m.mobile)}</a>` : '-'}
+          </div></div>
+          <div class="info-item"><label>অভিভাবক</label><div class="val">${escHtml(m.guardianName||'-')}</div></div>
+          <div class="info-item"><label>কেন্দ্র নং</label><div class="val">${escHtml(m.centerNo||'-')}</div></div>
+          <div class="info-item"><label>ঋণের ধরন</label><div class="val">${escHtml(m.loanType||'-')}</div></div>
+          <div class="info-item"><label>বিতরণের তারিখ</label><div class="val">${escHtml(m.loanDate||'-')}</div></div>
+          <div class="info-item"><label>বিতরণ পরিমান</label><div class="val">${m.loanAmount?Number(m.loanAmount).toLocaleString('bn-BD'):'-'}</div></div>
+          <div class="info-item"><label>ঋণ স্থিতি</label><div class="val">${m.loanBalance?Number(m.loanBalance).toLocaleString('bn-BD'):'-'}</div></div>
+          <div class="info-item"><label>ওডি পরিমান</label><div class="val odi-val">${m.odi?Number(m.odi).toLocaleString('bn-BD'):'-'}</div></div>
+        </div>
+      </div>
+    </div>
+    ${renderChecklist(memberId)}
+    <div class="action-bar">
+      <button class="btn btn-success" onclick="saveEntry(${memberId})">💾 সেভ করুন</button>
+      <button class="btn btn-primary" onclick="showAddCheckModal()">➕ চেক আইটেম</button>
+      ${m.mobile ? `<button class="btn btn-outline" onclick="window.location.href='tel:${escAttr(m.mobile)}'">📞 কল করুন</button>` : ''}
+    </div>`;
+  if (window.innerWidth <= 768) document.getElementById('sidebar').classList.add('hidden');
+  window.scrollTo(0,0);
+}
+
+// ================================================================
+// CHECKLIST RENDER
+// ================================================================
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function renderChecklist(memberId) {
+  const entry = appState.entries[memberId] || {};
+  const all = [...appState.checklistHeaders,
+    ...appState.customChecks.map(c=>({colIdx:'custom_'+c.id,section:c.section,subSection:c.subSection,isCustom:true}))];
+  if (!all.length) return `<div class="checklist-card"><div class="checklist-header"><h3>📋 চেক লিস্ট</h3></div><div style="padding:20px;text-align:center;color:var(--text-muted)">চেক লিস্ট তথ্য এক্সেলের AD-DI কলামে থাকতে হবে</div></div>`;
+
+  const sections = {};
+  all.forEach(h => { const s = h.section||'অন্যান্য'; if(!sections[s]) sections[s]=[]; sections[s].push(h); });
+  const total = all.length;
+  const done = all.filter(h=>{ const k=h.isCustom?h.colIdx:'col_'+h.colIdx; return entry[k]&&(entry[k].yes||(entry[k].comment||'').trim()); }).length;
+  const pct = total>0?Math.round(done/total*100):0;
+
+  let html = `<div class="checklist-card">
+    <div class="checklist-header">
+      <h3>📋 চেক লিস্ট</h3>
+      <div class="progress-bar-wrap">
+        <div class="progress-text">${done}/${total} (${pct}%)</div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+
+  Object.entries(sections).forEach(([sec, items]) => {
+    const sd = items.filter(h=>{ const k=h.isCustom?h.colIdx:'col_'+h.colIdx; return entry[k]&&(entry[k].yes||(entry[k].comment||'').trim()); }).length;
+    html += `<div class="section-block"><div class="section-head" onclick="toggleSection(this)">
+      <span style="font-family:var(--font)">${escHtml(sec)}</span>
+      <span class="section-count"><span class="done-count">${sd}</span>/${items.length} ▾</span>
+    </div><div class="section-body">`;
+    items.forEach(h => {
+      const k = h.isCustom?h.colIdx:'col_'+h.colIdx;
+      const val = entry[k]||{};
+      const isYes = val.yes||false;
+      const comment = val.comment||'';
+      html += `<div class="checklist-row">
+        <div class="check-label">
+          <div style="font-family:var(--font)">${escHtml(h.subSection||h.section)}</div>
+          ${h.subSection&&h.section?`<div class="sub-label" style="font-family:var(--font)">${escHtml(h.section)}</div>`:''}
+          ${h.isCustom?'<span style="font-size:10px;background:#fff3cd;color:#856404;padding:1px 5px;border-radius:4px">কাস্টম</span>':''}
+        </div>
+        <button class="check-yes-btn ${isYes?'yes-active':''}" onclick="toggleYes('${memberId}','${k}',this)">✓ Yes</button>
+        <input type="text" class="check-comment" lang="bn" spellcheck="false" autocomplete="off"
+          placeholder="${isYes?'✓ Yes নির্বাচিত':'বাংলা / English মন্তব্য'}"
+          value="${escAttr(comment)}" ${isYes?'disabled':''}
+          onchange="updateComment('${memberId}','${k}',this.value)"
+          oninput="autoSave(${memberId})">
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  return html + '</div>';
+}
+
+function toggleSection(el) {
+  el.parentElement.classList.toggle('collapsed');
+  const s = el.querySelector('.section-count');
+  s.innerHTML = s.innerHTML.includes('▾') ? s.innerHTML.replace('▾','▸') : s.innerHTML.replace('▸','▾');
+}
+
+function toggleYes(memberId, key, btn) {
+  if (!appState.entries[memberId]) appState.entries[memberId] = {};
+  const cur = appState.entries[memberId][key]||{};
+  const nv = !cur.yes;
+  appState.entries[memberId][key] = { yes:nv, comment:nv?'':(cur.comment||'') };
+  btn.classList.toggle('yes-active', nv);
+  const row = btn.closest('.checklist-row');
+  const inp = row.querySelector('.check-comment');
+  if (inp) { inp.disabled = nv; inp.placeholder = nv?'✓ Yes নির্বাচিত':'বাংলা / English মন্তব্য'; if(nv) inp.value=''; }
+  updateProgressBar(memberId);
+  autoSave(memberId);
+}
+
+function updateComment(memberId, key, val) {
+  if (!appState.entries[memberId]) appState.entries[memberId]={};
+  if (!appState.entries[memberId][key]) appState.entries[memberId][key]={};
+  appState.entries[memberId][key].comment = val;
+  updateProgressBar(memberId);
+}
+
+function updateProgressBar(memberId) {
+  const entry = appState.entries[memberId]||{};
+  const all = [...appState.checklistHeaders.map(h=>({k:'col_'+h.colIdx})), ...appState.customChecks.map(c=>({k:'custom_'+c.id}))];
+  const total = all.length; if(!total) return;
+  const done = all.filter(x=>{ const v=entry[x.k]; return v&&(v.yes||(v.comment||'').trim()); }).length;
+  const pct = Math.round(done/total*100);
+  const bar = document.querySelector('.progress-bar-fill');
+  const txt = document.querySelector('.progress-text');
+  if (bar) bar.style.width = pct+'%';
+  if (txt) txt.textContent = done+'/'+total+' ('+pct+'%)';
+  updateStats();
+}
+
+let autoSaveTimer = null;
+function autoSave(memberId) {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => saveEntry(memberId, true), 1200);
+}
+
+function saveEntry(memberId, silent=false) {
+  saveState();
+  updateStats();
+  filterMembers();
+  if (!silent) {
+    showToast('ডেটা সেভ হয়েছে ✓', 'success');
+    logActivity('এন্ট্রি', 'সদস্য ID ' + memberId + ' এর এন্ট্রি সেভ হয়েছে');
+  }
+}
+
+// ================================================================
+// CUSTOM CHECKLIST
+// ================================================================
+function showAddCheckModal() { document.getElementById('newSection').value=''; document.getElementById('newSubSection').value=''; document.getElementById('addCheckModal').style.display='flex'; }
+function addNewCheckItem() {
+  const sec = document.getElementById('newSection').value.trim();
+  const sub = document.getElementById('newSubSection').value.trim();
+  if (!sec && !sub) { showToast('সেকশন বা সাব-সেকশন দিন', 'error'); return; }
+  appState.customChecks.push({ id:Date.now(), section:sec||sub, subSection:sub?sub:'', isCustom:true });
+  closeModal('addCheckModal');
+  saveState();
+  showToast('চেক আইটেম যোগ হয়েছে ✓', 'success');
+  if (appState.currentMemberId !== null) selectMember(appState.currentMemberId);
+}
+
+// ================================================================
+// DOWNLOAD
+// ================================================================
+function downloadExcel() {
+  if (!appState.originalData.length) { showToast('ডাউনলোডযোগ্য ডেটা নেই', 'error'); return; }
+  try {
+    const data = appState.originalData.map(r => [...r]);
+    const maxCol = appState.checklistHeaders.length ? Math.max(...appState.checklistHeaders.map(h=>h.colIdx)) : 112;
+    appState.members.forEach(m => {
+      const entry = appState.entries[m.id];
+      if (!entry) return;
+      const r = m.rowIdx;
+      if (!data[r]) return;
+      appState.checklistHeaders.forEach(h => {
+        const v = entry['col_'+h.colIdx];
+        if (v) { while(data[r].length<=h.colIdx) data[r].push(''); data[r][h.colIdx] = v.yes?'Yes':(v.comment||''); }
+      });
+      appState.customChecks.forEach((c,ci) => {
+        const v = entry['custom_'+c.id];
+        const col = maxCol+1+ci;
+        while(data[r].length<=col) data[r].push('');
+        if (v) data[r][col] = v.yes?'Yes':(v.comment||'');
+      });
+    });
+    if (appState.customChecks.length) {
+      const sc = maxCol+1;
+      if (!data[0]) data[0]=[];
+      if (!data[1]) data[1]=[];
+      appState.customChecks.forEach((c,ci) => {
+        const col = sc+ci;
+        while(data[0].length<=col) data[0].push('');
+        while(data[1].length<=col) data[1].push('');
+        data[0][col]=c.section; data[1][col]=c.subSection;
+      });
+    }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), 'Sheet1');
+    XLSX.writeFile(wb, 'সদস্য_যাচাই_ডেটা.xlsx');
+    showToast('ডাউনলোড শুরু হয়েছে ✓', 'success');
+    logActivity('ডাউনলোড', 'এক্সেল ফাইল ডাউনলোড করা হয়েছে');
+  } catch(e) { showToast('ডাউনলোডে সমস্যা: ' + e.message, 'error'); }
+}
+
+// ================================================================
+// RESET
+// ================================================================
+function confirmReset() { closeModal('adminPanelModal'); document.getElementById('resetModal').style.display='flex'; }
+function doReset() {
+  const key = getStorageKey();
+  if (key) localStorage.removeItem(key);
+  appState = { members:[], checklistHeaders:[], entries:{}, customChecks:[], currentMemberId:null, filterStatus:'all', originalData:[], adminEditingUser:null, adminEditingRole:null };
+  closeModal('resetModal');
+  document.getElementById('welcomeScreen').style.display='block';
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('dlBtn').style.display='none';
+  document.getElementById('headerStats').style.display='none';
+  document.getElementById('mainContent').classList.add('full-width');
+  document.getElementById('sidebar').classList.add('hidden');
+  document.getElementById('welcomeScreen').innerHTML = `
+    <div class="welcome-screen">
+      <div style="font-size:48px;margin-bottom:16px">📊</div>
+      <h2>স্বাগতম, <span id="welcomeName">${escHtml(auth.currentUser.fullname||'')}</span></h2>
+      <p>এক্সেল ফাইল আপলোড করুন</p>
+      <div class="upload-zone" onclick="document.getElementById('mainUploadInput').click()">
+        <div style="font-size:36px;margin-bottom:8px">📁</div>
+        <div style="font-weight:600;font-size:14px;color:var(--primary)">এক্সেল ফাইল আপলোড করুন</div>
+        <button class="upload-btn">ফাইল বেছে নিন</button>
+      </div>
+      <input type="file" id="mainUploadInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+    </div>`;
+  showToast('রিসেট সম্পন্ন', 'info');
+  logActivity('রিসেট', 'ডেটা রিসেট করা হয়েছে');
+}
+
+// ================================================================
+// MODAL / TOAST / UTILS
+// ================================================================
+function closeModal(id) { document.getElementById(id).style.display='none'; }
+window.addEventListener('click', function(e) {
+  ['resetModal','adminPanelModal','addCheckModal','addUserModal','editUserModal','changePassModal'].forEach(id => {
+    const m = document.getElementById(id);
+    if (m && e.target === m) m.style.display='none';
+  });
+});
+function showToast(msg, type='info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className='toast '+type; t.textContent=msg; c.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .4s'; setTimeout(()=>t.remove(),400); },3000);
+}
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const m = document.getElementById('mainContent');
+  s.classList.toggle('hidden');
+  if (window.innerWidth > 768) m.style.marginLeft = s.classList.contains('hidden')?'0':'var(--sidebar-w)';
+}
+window.addEventListener('resize', function() {
+  const s = document.getElementById('sidebar');
+  const m = document.getElementById('mainContent');
+  if (window.innerWidth > 768) {
+    s.classList.remove('hidden');
+    if (appState.members.length > 0) m.style.marginLeft = 'var(--sidebar-w)';
+  }
+});
+
+// ================================================================
+// PWA
+// ================================================================
+(function injectManifest() {
+  const manifest = { name:'সদস্য যাচাই অ্যাপ', short_name:'সদস্য যাচাই', start_url:'./', display:'standalone', background_color:'#1a5276', theme_color:'#1a5276', lang:'bn',
+    icons:[{src:genIcon(192), sizes:'192x192',type:'image/png'},{src:genIcon(512),sizes:'512x512',type:'image/png'}] };
+  function genIcon(sz) {
+    const cv=document.createElement('canvas'); cv.width=sz; cv.height=sz;
+    const ctx=cv.getContext('2d');
+    const g=ctx.createLinearGradient(0,0,sz,sz); g.addColorStop(0,'#1a5276'); g.addColorStop(1,'#2e86c1');
+    ctx.fillStyle=g; ctx.roundRect(0,0,sz,sz,sz*.2); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='bold '+(sz*.45)+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('✓',sz/2,sz/2); return cv.toDataURL('image/png');
+  }
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
+  const link=document.getElementById('pwaManifest');
+  if(link) link.href=URL.createObjectURL(blob);
+})();
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;document.getElementById('installBtn').style.display='flex';const b=document.getElementById('installBanner');if(b)b.style.display='block';});
+window.addEventListener('appinstalled',()=>{deferredInstall=null;document.getElementById('installBtn').style.display='none';showToast('অ্যাপ ইনস্টল হয়েছে ✓','success');});
+function installApp(){if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(r=>{if(r.outcome==='accepted')showToast('ইনস্টল হচ্ছে...','success');deferredInstall=null;});}else{showToast('ব্রাউজার মেনু থেকে "Add to Home Screen" বেছে নিন','info');}}
+if('serviceWorker' in navigator){const sw=`const C='mva-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll([self.registration.scope]).catch(()=>{})).then(()=>self.skipWaiting())));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{if(res&&res.status===200){const cl=res.clone();caches.open(C).then(c=>c.put(e.request,cl));}return res;}))));`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'})),{scope:'./'}).catch(()=>{});}
+
+// ================================================================
+// STARTUP
+// ================================================================
+window.addEventListener('DOMContentLoaded', function() {
+  if (restoreSession()) {
+    startApp();
+  }
+  // Update session timestamp periodically
+  setInterval(()=>{
+    if (auth.currentUser) {
+      try{const s=JSON.parse(localStorage.getItem('mva_session')||'{}');s.time=Date.now();localStorage.setItem('mva_session',JSON.stringify(s));}catch(e){}
+    }
+  }, 60000);
+});
+</script>
+</body>
+</html>
