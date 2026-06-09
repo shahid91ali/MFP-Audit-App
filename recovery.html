@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MVA ইউজার রিকভারি টুল</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
+  .box { background: white; border-radius: 12px; padding: 24px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,.1); }
+  h1 { color: #1a5276; font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #718096; font-size: 13px; margin-bottom: 20px; }
+  .status { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+  .ok { background: #d5f5e3; color: #1e8449; border: 1px solid #a9dfbf; }
+  .warn { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
+  .err { background: #fadbd8; color: #c0392b; border: 1px solid #f1948a; }
+  .info { background: #e8f4fd; color: #1a5276; border: 1px solid #aed6f1; }
+  .key-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #d1d9e0; border-radius: 8px; margin-bottom: 8px; }
+  .key-name { font-family: monospace; font-size: 12px; flex: 1; word-break: break-all; color: #1a5276; }
+  .key-count { background: #1a5276; color: white; border-radius: 12px; padding: 2px 10px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-primary { background: #1a5276; color: white; }
+  .btn-success { background: #1e8449; color: white; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  textarea { width: 100%; padding: 10px; border: 1px solid #d1d9e0; border-radius: 8px; font-family: monospace; font-size: 11px; resize: none; outline: none; box-sizing: border-box; word-break: break-all; }
+  .section-title { font-weight: 700; font-size: 14px; color: #1a5276; margin: 16px 0 10px; }
+  .user-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; margin: 3px; }
+  .chip-admin { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+  .chip-user { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🔧 MVA ইউজার রিকভারি টুল</h1>
+  <p class="sub">পুরনো অ্যাপের ইউজার ডেটা খুঁজে বের করে Config Code তৈরি করুন</p>
+
+  <div id="output"></div>
+
+  <div class="section-title">📦 localStorage-এ পাওয়া সব MVA ডেটা:</div>
+  <div id="keyList"><em style="color:#718096;font-size:13px">স্ক্যান করা হচ্ছে...</em></div>
+
+  <div id="codeSection" style="display:none;margin-top:20px">
+    <div class="section-title">📋 Config Code (এটি কপি করুন):</div>
+    <textarea id="codeArea" rows="6" readonly onclick="this.select()"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="copyCode()">📋 কোড কপি করুন</button>
+      <button class="btn btn-success" onclick="generateLink()">🔗 লিংক তৈরি করুন</button>
+    </div>
+    <div id="linkArea" style="display:none;margin-top:10px">
+      <textarea id="linkText" rows="3" readonly onclick="this.select()"></textarea>
+      <button class="btn btn-primary btn-sm" style="margin-top:6px" onclick="copyLink()">📋 লিংক কপি</button>
+    </div>
+    <div class="status info" style="margin-top:12px;font-size:12px">
+      ✅ এই Config Code নতুন অ্যাপে (member-verification-app.html) খুলুন →<br>
+      লগইন পেজে "কনফিগ কোড Import করুন" বাটনে ক্লিক → কোড পেস্ট করুন
+    </div>
+  </div>
+
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0">
+    <button class="btn btn-primary" onclick="runScan()" style="width:100%">🔍 আবার স্ক্যান করুন</button>
+  </div>
+</div>
+
+<script>
+function getAllMvaKeys() {
+  const results = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    if (key.includes('mva_')) {
+      const val = localStorage.getItem(key);
+      if (val) results.push({ key, val, size: val.length });
+    }
+  }
+  return results;
+}
+
+function extractUsers(val) {
+  try {
+    const parsed = JSON.parse(val);
+    if (Array.isArray(parsed)) {
+      // Direct array of users
+      if (parsed.length > 0 && parsed[0].username) return parsed;
+    }
+    if (parsed && parsed.users && Array.isArray(parsed.users)) {
+      return parsed.users;
+    }
+  } catch(e) {}
+  return null;
+}
+
+function mergeAll(lists) {
+  const merged = [];
+  lists.forEach(list => {
+    list.forEach(u => {
+      if (!merged.find(m => m.username === u.username)) merged.push(u);
+    });
+  });
+  return merged;
+}
+
+function makeConfigCode(users) {
+  const data = {
+    v: 2, app: 'mva', ts: Date.now(),
+    users: users.map(u => ({
+      id: u.id || ('u_' + u.username),
+      username: u.username, password: u.password,
+      fullname: u.fullname || u.username,
+      role: u.role || 'user',
+      auditorName: u.auditorName || '',
+      createdAt: u.createdAt || new Date().toISOString()
+    }))
+  };
+  try { return btoa(unescape(encodeURIComponent(JSON.stringify(data)))); }
+  catch(e) { return btoa(JSON.stringify(data)); }
+}
+
+let recoveredCode = '';
+
+function runScan() {
+  const out = document.getElementById('output');
+  const keyList = document.getElementById('keyList');
+  const codeSection = document.getElementById('codeSection');
+
+  const allKeys = getAllMvaKeys();
+
+  if (allKeys.length === 0) {
+    out.innerHTML = '<div class="status err">❌ এই ব্রাউজারে কোনো MVA ডেটা পাওয়া যায়নি।<br><br>সম্ভাব্য কারণ:<br>• অন্য ব্রাউজারে (Chrome/Firefox/Edge) পুরনো অ্যাপ চালিয়ে ছিলেন<br>• Private/Incognito mode-এ ব্যবহার করা হয়েছিল<br>• Browser cache clear করা হয়েছে</div>';
+    keyList.innerHTML = '';
+    codeSection.style.display = 'none';
+    return;
+  }
+
+  // User-containing keys খুঁজি
+  const userLists = [];
+  let keyHtml = '';
+
+  allKeys.forEach(({ key, val, size }) => {
+    const users = extractUsers(val);
+    const sizeKb = (size / 1024).toFixed(1);
+
+    if (users && users.length > 0) {
+      userLists.push(users);
+      const chips = users.map(u =>
+        `<span class="user-chip ${u.role === 'admin' ? 'chip-admin' : 'chip-user'}">
+          ${u.role === 'admin' ? '🔐' : '👤'} ${u.fullname || u.username} (@${u.username})
+        </span>`
+      ).join('');
+      keyHtml += `<div class="key-row" style="flex-direction:column;align-items:flex-start">
+        <div style="display:flex;width:100%;align-items:center;gap:8px">
+          <span class="key-name">${key}</span>
+          <span class="key-count">${users.length} জন</span>
+          <span style="font-size:11px;color:#718096">${sizeKb}KB</span>
+        </div>
+        <div style="margin-top:6px">${chips}</div>
+      </div>`;
+    } else {
+      keyHtml += `<div class="key-row">
+        <span class="key-name">${key}</span>
+        <span style="font-size:11px;color:#718096">${sizeKb}KB (ইউজার নেই)</span>
+      </div>`;
+    }
+  });
+
+  keyList.innerHTML = keyHtml || '<em style="color:#718096;font-size:13px">কোনো key পাওয়া যায়নি</em>';
+
+  if (userLists.length > 0) {
+    const allUsers = mergeAll(userLists);
+    recoveredCode = makeConfigCode(allUsers);
+
+    out.innerHTML = `<div class="status ok">✅ ${allUsers.length} জন ইউজার পাওয়া গেছে! নিচের Config Code কপি করে নতুন অ্যাপে Import করুন।</div>`;
+    document.getElementById('codeArea').value = recoveredCode;
+    codeSection.style.display = 'block';
+  } else {
+    out.innerHTML = `<div class="status warn">⚠️ ${allKeys.length}টি MVA key পাওয়া গেছে কিন্তু কোনো ইউজার ডেটা নেই।</div>`;
+    codeSection.style.display = 'none';
+  }
+}
+
+function copyCode() {
+  const ta = document.getElementById('codeArea');
+  ta.select();
+  navigator.clipboard.writeText(ta.value)
+    .then(() => alert('✅ কোড কপি হয়েছে!\n\nএখন member-verification-app.html খুলুন এবং লগইন পেজে "কনফিগ কোড Import" বাটনে কোড পেস্ট করুন।'))
+    .catch(() => { document.execCommand('copy'); alert('✅ কোড কপি হয়েছে!'); });
+}
+
+function generateLink() {
+  const mainAppPath = window.location.href.replace('mva-recovery-tool.html', 'member-verification-app.html');
+  const link = mainAppPath.split('#')[0] + '#cfg=' + encodeURIComponent(recoveredCode);
+  document.getElementById('linkText').value = link;
+  document.getElementById('linkArea').style.display = 'block';
+}
+
+function copyLink() {
+  const ta = document.getElementById('linkText');
+  ta.select();
+  navigator.clipboard.writeText(ta.value)
+    .then(() => alert('✅ লিংক কপি হয়েছে!\n\nএই লিংক ব্রাউজারে খুললে সব ইউজার স্বয়ংক্রিয়ভাবে লোড হবে।'))
+    .catch(() => { document.execCommand('copy'); alert('✅ লিংক কপি হয়েছে!'); });
+}
+
+// Auto run on load
+runScan();
+</script>
+</body>
+</html>
